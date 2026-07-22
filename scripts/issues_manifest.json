@@ -1984,5 +1984,22 @@
       "docker-compose.yml"
     ],
     "effort": "2\u20134 hours"
+  },
+  {
+    "id": "G-26",
+    "title": "Wire real ingestion into _run_ingestion_pipeline instead of placeholder GitHub/portfolio data",
+    "body": "_run_ingestion_pipeline in core/services/review_service.py currently fabricates GitHub and portfolio data as f-strings and never calls the real GitHubTool (agent/tools/github_tool.py) or the real IngestionPipeline (ingestion/pipeline.py, see A-13/A-21). It also has no notion of which repos to fetch for a profile. Replace the placeholder with real GitHub API calls via GitHubTool for each of the profile's repos, a real portfolio fetch/parse step, and delegate resume/README/repo ingestion to IngestionPipeline so chunking, embedding, and the A-13 dedup logic are actually exercised during review processing.",
+    "labels": [
+      "tier-2",
+      "ingestion",
+      "agent",
+      "enhancement"
+    ],
+    "files": [
+      "core/services/review_service.py",
+      "agent/tools/github_tool.py",
+      "ingestion/pipeline.py"
+    ],
+    "effort": "6-9 hours"
   }
 ]
