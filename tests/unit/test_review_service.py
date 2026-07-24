@@ -48,6 +48,57 @@ class TestReviewService:
         return profile
 
     @pytest.mark.asyncio
+    async def test_create_review_returns_none_when_profile_not_owned_by_user(self, mock_db_session):
+        """Test create_review returns None when profile_id isn't owned by user_id."""
+        profile_id = uuid4()
+        user_id = uuid4()
+
+        mock_result = Mock()
+        mock_result.scalars.return_value.first.return_value = None
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
+
+        result = await create_review(mock_db_session, profile_id, user_id)
+
+        assert result is None
+        mock_db_session.add.assert_not_called()
+        mock_db_session.commit.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_create_review_creates_review_when_profile_owned_by_user(
+        self, mock_db_session, mock_profile
+    ):
+        """Test create_review creates a Review when the profile belongs to user_id."""
+        mock_result = Mock()
+        mock_result.scalars.return_value.first.return_value = mock_profile
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
+
+        with patch("core.services.review_service.Review") as MockReview:
+            MockReview.return_value = Mock()
+
+            result = await create_review(mock_db_session, mock_profile.id, mock_profile.user_id)
+
+            MockReview.assert_called_once()
+            call_kwargs = MockReview.call_args[1]
+            assert call_kwargs["profile_id"] == mock_profile.id
+            mock_db_session.add.assert_called_once()
+            mock_db_session.commit.assert_called_once()
+            assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_create_review_queries_profile_scoped_to_user_before_creating(
+        self, mock_db_session, mock_profile
+    ):
+        """Test create_review looks up Profile (scoped by user_id) before creating a Review."""
+        mock_result = Mock()
+        mock_result.scalars.return_value.first.return_value = mock_profile
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
+
+        with patch("core.services.review_service.Review"):
+            await create_review(mock_db_session, mock_profile.id, mock_profile.user_id)
+
+        mock_db_session.execute.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_create_review_returns_review_with_pending_status(
         self, mock_db_session, mock_review
     ):
@@ -59,6 +110,10 @@ class TestReviewService:
         mock_db_session.add = Mock()
         mock_db_session.commit = AsyncMock()
         mock_db_session.refresh = AsyncMock()
+
+        mock_result = Mock()
+        mock_result.scalars.return_value.first.return_value = Mock(id=profile_id, user_id=user_id)
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         with patch("core.services.review_service.Review") as MockReview:
             mock_instance = MockReview.return_value
@@ -168,6 +223,10 @@ class TestReviewService:
         profile_id = uuid4()
         user_id = uuid4()
 
+        mock_result = Mock()
+        mock_result.scalars.return_value.first.return_value = Mock(id=profile_id, user_id=user_id)
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
+
         with patch("core.services.review_service.Review"):
             await create_review(mock_db_session, profile_id, user_id)
 
@@ -179,6 +238,10 @@ class TestReviewService:
         profile_id = uuid4()
         user_id = uuid4()
 
+        mock_result = Mock()
+        mock_result.scalars.return_value.first.return_value = Mock(id=profile_id, user_id=user_id)
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
+
         with patch("core.services.review_service.Review"):
             await create_review(mock_db_session, profile_id, user_id)
 
@@ -189,6 +252,10 @@ class TestReviewService:
         """Test create_review calls db.refresh()."""
         profile_id = uuid4()
         user_id = uuid4()
+
+        mock_result = Mock()
+        mock_result.scalars.return_value.first.return_value = Mock(id=profile_id, user_id=user_id)
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         with patch("core.services.review_service.Review"):
             await create_review(mock_db_session, profile_id, user_id)
@@ -247,6 +314,10 @@ class TestReviewService:
         profile_id = uuid4()
         user_id = uuid4()
 
+        mock_result = Mock()
+        mock_result.scalars.return_value.first.return_value = Mock(id=profile_id, user_id=user_id)
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
+
         with patch("core.services.review_service.Review") as MockReview:
             MockReview.return_value = Mock()
             await create_review(mock_db_session, profile_id, user_id)
@@ -304,6 +375,10 @@ class TestReviewService:
         """Test review has None for sections and overall_score initially."""
         profile_id = uuid4()
         user_id = uuid4()
+
+        mock_result = Mock()
+        mock_result.scalars.return_value.first.return_value = Mock(id=profile_id, user_id=user_id)
+        mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         with patch("core.services.review_service.Review") as MockReview:
             MockReview.return_value = Mock()
