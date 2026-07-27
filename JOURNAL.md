@@ -21,3 +21,20 @@ I wasn't able to retrieve the course page's own "Is this right for me?" checklis
 **Setup confirmation:** [*] App runs locally at localhost:5173
 
 **Cohort ledger:** [*] Issue added to cohort ledger
+
+
+## Week 8 — Reproduction & solution planning
+
+**Issue link:** https://github.com/ascherj/pathreview/issues/163
+
+**Reproduction commit link:** https://github.com/hfenelsoftllc/pathreview/commit/ec696bcd5aba1bed6bea7eb6df0ad7c88e93ca5f
+
+**Reproduction summary:**
+Read `create_review()` in `core/services/review_service.py` alongside `get_review()`/`list_reviews()` in the same file and confirmed by inspection that `create_review()` accepts a `user_id` argument but never queries `Profile` with it — it builds the `Review` straight from the caller-supplied `profile_id`, unlike its sibling functions which join through `Profile.user_id`. I reproduced this at the test level (TDD "red" step) by writing a unit test that calls `create_review()` with a `profile_id`/`user_id` pair that don't match any owned profile and asserting it returns `None`; against the original code this test failed because `create_review()` never called `db.execute()` at all (0 calls), proving it created a `Review` unconditionally regardless of ownership.
+
+**PLAN.md link:** https://github.com/hfenelsoftllc/pathreview/blob/fix/163-scope-create-review-to-owner/PLAN.md
+
+**Walkthrough video (recommended):** [link to your Loom video, ≤2 min — recommended, not graded]
+
+**Blockers or open questions:**
+GitHub Actions has never run on this fork (0 total workflow runs repo-wide) — forks have Actions disabled by default until manually enabled from the Actions tab — so PR #5 currently has no CI status checks. Proceeding with local `pytest` verification for now; will revisit enabling Actions before Week 9 if CI status is expected on the PR.
