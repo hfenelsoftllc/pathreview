@@ -38,3 +38,58 @@ Read `create_review()` in `core/services/review_service.py` alongside `get_revie
 
 **Blockers or open questions:**
 GitHub Actions has never run on this fork (0 total workflow runs repo-wide) — forks have Actions disabled by default until manually enabled from the Actions tab — so PR #5 currently has no CI status checks. Proceeding with local `pytest` verification for now; will revisit enabling Actions before Week 9 if CI status is expected on the PR.
+
+## Week 9 — Solution building & PR submission
+
+### Check-in 1 (mid-week)
+
+**Current progress:**
+All 5 sub-tasks from PLAN.md are done. Wrote failing tests first (red) asserting
+`create_review()` returns `None` for a `profile_id` not owned by `user_id`, then
+implemented the fix (green): `create_review()` now queries `Profile` scoped by
+`(id, user_id)` before building the `Review`, returning `None` on no match. Wired
+`create_review_endpoint()` to raise `404 "Profile not found"` when that happens,
+matching `get_review_endpoint()`'s existing cross-user behavior. Updated the
+pre-existing `create_review` tests to mock the new `Profile` lookup.
+
+**Next steps:**
+Ran the full unit suite to confirm no regressions, filled in the PR description,
+and closed out the Week 9 journal entries.
+
+**Blockers:**
+None. (Note: `.venv` in this workspace is WSL/Linux-targeted, not runnable from
+native Windows shells directly — had to invoke pytest via `wsl.exe` to verify.)
+
+---
+
+### Check-in 2 (end of week)
+
+**PR link:** https://github.com/ascherj/pathreview/pull/309
+
+**Branch:** `fix/163-scope-create-review-to-owner`
+
+**What you built:**
+Fixed an IDOR / broken object-level authorization bug where `POST /reviews` let
+any authenticated user create a review against another user's profile, as long
+as they knew or guessed that profile's UUID. `create_review()` now looks up the
+`Profile` scoped by `(id, user_id)` before creating the `Review`, returning `None`
+if it isn't owned by the caller — the endpoint maps that to a 404, consistent with
+how `get_review()`/`list_reviews()` already scope reads.
+
+**Tests added or updated:**
+`tests/unit/test_review_service.py` — added 8 new tests covering `create_review()`
+ownership: creates review when profile is owned, returns `None` when it isn't,
+scopes the DB query correctly, and preserves existing behavior (`pending` status,
+`db.add`/`commit`/`refresh` calls). Also updated the pre-existing `create_review`
+tests to mock the new `Profile` lookup so they still exercise the owned path.
+
+**Self-review confirmation:** [ ] make check passes  [x] make test-unit passes
+(`test_review_service.py`'s 8 new/updated `create_review` tests all pass; 13
+pre-existing failures in `get_review`/`list_reviews` tests are an unrelated
+`AsyncMock` environment issue confirmed via `git stash` baseline against
+`origin/main`, documented in PLAN.md's Risks section — not introduced by this
+change. `make check` (ruff/mypy) does not pass repo-wide — it fails on
+pre-existing lint/type debt unrelated to this change, same as noted in the
+`ec696bc` commit message; not re-attempted here.)
+
+**Draft PR feedback received from:** none
