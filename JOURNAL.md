@@ -38,3 +38,89 @@ Read `create_review()` in `core/services/review_service.py` alongside `get_revie
 
 **Blockers or open questions:**
 GitHub Actions has never run on this fork (0 total workflow runs repo-wide) — forks have Actions disabled by default until manually enabled from the Actions tab — so PR #5 currently has no CI status checks. Proceeding with local `pytest` verification for now; will revisit enabling Actions before Week 9 if CI status is expected on the PR.
+
+## Week 9 — Solution building & PR submission
+
+### Check-in 1 (mid-week)
+
+**Current progress:**
+All 5 sub-tasks from PLAN.md are done. Wrote failing tests first (red) asserting
+`create_review()` returns `None` for a `profile_id` not owned by `user_id`, then
+implemented the fix (green): `create_review()` now queries `Profile` scoped by
+`(id, user_id)` before building the `Review`, returning `None` on no match. Wired
+`create_review_endpoint()` to raise `404 "Profile not found"` when that happens,
+matching `get_review_endpoint()`'s existing cross-user behavior. Updated the
+pre-existing `create_review` tests to mock the new `Profile` lookup.
+
+**Next steps:**
+Ran the full unit suite to confirm no regressions, filled in the PR description,
+and closed out the Week 9 journal entries.
+
+**Blockers:**
+None. (Note: `.venv` in this workspace is WSL/Linux-targeted, not runnable from
+native Windows shells directly — had to invoke pytest via `wsl.exe` to verify.)
+
+---
+
+### Check-in 2 (end of week)
+
+**PR link:** https://github.com/ascherj/pathreview/pull/309
+
+**Branch:** `fix/163-scope-create-review-to-owner`
+
+**What you built:**
+Fixed an IDOR / broken object-level authorization bug where `POST /reviews` let
+any authenticated user create a review against another user's profile, as long
+as they knew or guessed that profile's UUID. `create_review()` now looks up the
+`Profile` scoped by `(id, user_id)` before creating the `Review`, returning `None`
+if it isn't owned by the caller — the endpoint maps that to a 404, consistent with
+how `get_review()`/`list_reviews()` already scope reads.
+
+**Tests added or updated:**
+`tests/unit/test_review_service.py` — added 8 new tests covering `create_review()`
+ownership: creates review when profile is owned, returns `None` when it isn't,
+scopes the DB query correctly, and preserves existing behavior (`pending` status,
+`db.add`/`commit`/`refresh` calls). Also updated the pre-existing `create_review`
+tests to mock the new `Profile` lookup so they still exercise the owned path.
+
+`tests/unit/test_reviews.py` (new file) — added the repo's first route-level
+test, covering `create_review_endpoint()`'s HTTP behavior directly: 404
+`"Profile not found"` when `create_review()` returns `None`, and 200 with the
+serialized review body when it succeeds. Mounts only `reviews.router` on a bare
+`FastAPI()` app with `get_current_user`/`get_db` overridden and
+`create_review`/`process_review` patched at the point of use, so it stays a true
+unit test (no real DB, no `api.main`'s `startup` → `init_db()` side effect).
+
+**Follow-up cleanup (post Check-in 1):**
+Type-checking the new test file surfaced pre-existing `mypy`/`ruff` debt in
+`core/services/review_service.py` and `api/routes/reviews.py` (missing
+`db: AsyncSession` annotations, two `no-any-return` findings, `Depends()`-in-default
+and bare-`raise`-in-`except` bugbear findings) that predates this branch. Fixed
+rather than skipped: added the missing annotations, narrowed the `Any` returns via
+typed locals, added `from exc` to four bare re-raises, and added
+`extend-immutable-calls = ["fastapi.Depends"]` to `pyproject.toml`'s ruff config
+(ruff's documented fix for FastAPI's idiomatic `Depends()`-as-default pattern). No
+behavior change — verified via WSL pytest (2 new route tests + 8 `create_review`
+tests still pass) and `pre-commit run` (ruff/black/mypy all pass on every file this
+branch touches).
+
+Also ran a self-review against `docs/CONTRIBUTING.md`: branch name and commit
+format are compliant; two commits (`ec696bc`, `7deedb9`) used scope `reviews`
+instead of the documented `api`, and touched functions use short one-line
+docstrings rather than full Google-style — both flagged as pre-existing/repo-wide
+conventions (confirmed via precedent in `profile_service.py`/`profiles.py` and
+this repo's own commit history) rather than fixed, since fixing the scope would
+mean rewriting already-pushed history on an open PR for a cosmetic deviation.
+
+**Self-review confirmation:** [x] make check passes  [x] make test-unit passes
+(Scoped to what this branch touches: `ruff`/`black`/`mypy` all pass via
+`pre-commit run` on `review_service.py`, `reviews.py`, `test_reviews.py`, and
+`pyproject.toml`. Repo-wide `make check`/`make test-unit` still surface pre-existing,
+unrelated failures — 152 ruff findings and 49 black reformats elsewhere in the repo,
+a `mypy` run that aborts early on missing third-party stubs, and 53 pre-existing
+unit test failures (13 in `get_review`/`list_reviews` from the documented `AsyncMock`
+issue, 40 more spread across unrelated modules like `test_skill_extractor.py` and
+`test_tech_detector.py`) — none introduced by this change, confirmed against the
+`main` baseline.)
+
+**Draft PR feedback received from:** none
