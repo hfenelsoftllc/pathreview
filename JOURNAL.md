@@ -123,4 +123,65 @@ issue, 40 more spread across unrelated modules like `test_skill_extractor.py` an
 `test_tech_detector.py`) — none introduced by this change, confirmed against the
 `main` baseline.)
 
-**Draft PR feedback received from:** none
+## Week 10 — Iteration & reflection
+
+This week's iteration wasn't limited to review comments. PR #5 merged the
+ownership fix on 2026-07-24, but it was reverted on 2026-07-30
+([`fe108fe`](https://github.com/hfenelsoftllc/pathreview/commit/fe108fe7e9ea016363e2324a12a7ec54b8d50e35)),
+which stripped the fix, `PLAN.md`, the test file, and the Week 8 journal entry
+back out of `main` — restoring the original IDOR bug with zero test coverage
+for it. [PR #6](https://github.com/hfenelsoftllc/pathreview/pull/6) re-landed
+everything from #5 on top of current `main`, plus the route-level tests and
+mypy/ruff cleanup already documented in Week 9.
+
+### Reviewer feedback
+
+**Feedback received:** [*] Yes  [ ] No — still awaiting review
+
+**Summary of feedback:**
+The reviewer called the testing approach thorough and said it showed strong
+instincts: writing the failing test first, covering both the owned and
+not-owned paths, and adding route-level tests that isolate the endpoint from
+the real database and startup side effects. Their one suggestion was to
+strengthen the database-level tests specifically — they flagged a likely edge
+case I hadn't covered, one that could make the suite brittle if the
+implementation changed even slightly. The intent behind the suggestion was to
+make the test suite resilient to future implementation changes, not just
+correct against the current one.
+
+**How you responded:**
+Feedback like this is worth treating as a chance to learn rather than a note
+to clear. I agree with the direction — database-level testing is a
+notoriously easy place for a suite to end up coupled to implementation
+details instead of behavior. That said, I haven't written the additional
+edge-case test yet; it's the immediate next step before I'd consider this
+branch fully iterated on, not something already landed in a commit.
+---
+
+### Reflection
+
+**What was harder than you expected?**
+I'd never worked in an OSS codebase before, and the sheer volume of
+information was overwhelming — figuring out which part of the problem to
+tackle, and understanding the application's objectives well enough to
+calibrate my work against the specific issue I was targeting.
+
+**What did you learn about working in a large codebase?**
+I'm already comfortable with large codebases from work experience, but
+always in a structured setting — a Jira board where you pick which epic or
+sprint task to work on from a backlog. I try to replicate that structure on
+my own projects too, using GitHub's project management features to define
+everything on my own backlog as issues.
+
+**How did AI tools help — and where did they fall short?**
+AI tools were most useful during the implementation phase — once the plan
+was set, they let me move noticeably faster on code delivery.
+
+**What would you do differently if you started over?**
+For implementation specifically, I'd lean on AI tools again — they saved a
+meaningful amount of time on code delivery.
+
+**What are you most proud of from this module?**
+Learning this new way of building software: one where I structure my
+planning steps up front and feed the AI more context about my choices and
+objectives before it writes any code.
